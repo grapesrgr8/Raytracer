@@ -5,6 +5,24 @@
 #include <memory>
 #include <vector>
 #include <limits>
+#include <algorithm>
+struct pointlight
+{
+public:
+	vec origin;
+	float intensity;
+	pointlight(vec o, float i) :origin{ o }, intensity{ i }{}
+	vec light_direction(const vec& hit) { return hit - origin; }//not normalized need it for other things
+};
+
+struct directlight
+{
+public:
+	vec direction;
+	float intensity;
+	directlight(vec dir, float i) :direction{ dir }, intensity{ i }{}
+	vec light_direction(const vec& hit) { return direction; }
+};
 
 struct sphere
 {
@@ -50,11 +68,17 @@ float closest_intersection(std::vector<std::unique_ptr<sphere>>& obj, const ray&
 vec scene(std::vector<std::unique_ptr<sphere>> &obj, const ray& r)
 {
 	int pos;
+	directlight p{ vec(3,2,-1), 0.8f };
 	float closest_t = closest_intersection(obj, r, pos);
+	vec hit_point = r.point(closest_t);
 	if (closest_t != std::numeric_limits<float>::max())
-		return obj[pos]->color;
+	{
+		vec normal = (hit_point - obj[pos]->position).normalize();
+		vec diffuse = std::max(0.0f, dot(-p.light_direction(hit_point), normal)) * obj[pos]->color * p.intensity;
+		return diffuse;
+	}
 	else
-		return vec(1, 1, 1);
+		return vec(0, 0, 0);
 }
 
 int main()
@@ -77,9 +101,9 @@ int main()
 			float v = float(j) / float(SCR_HEIGHT);
 			ray r(origin, (lower_left + u * horizontal + v * vertical).normalize());
 			vec color = scene(objects, r);
-			unsigned char red = (unsigned char)(color.xCoord() * 255);
-			unsigned char green = (unsigned char)(color.yCoord() * 255);
-			unsigned char blue = (unsigned char)(color.zCoord() * 255);
+			unsigned char red = (unsigned char)(std::max(0.0f, std::min(1.0f, color.xCoord())) * 255);
+			unsigned char green = (unsigned char)(std::max(0.0f, std::min(1.0f, color.yCoord())) * 255);
+			unsigned char blue = (unsigned char)(std::max(0.0f, std::min(1.0f, color.zCoord())) * 255);
 			file << red << green << blue;
 		}
 	}
