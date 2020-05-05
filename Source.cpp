@@ -62,6 +62,18 @@ bool check_shadow(std::vector<std::unique_ptr<sphere>>& obj, const vec& hit_poin
 		return true;
 }
 
+vec refract(const vec& I, const vec& N, const float& ior)
+{
+	float cosi = std::max(-1.0f, std::min(1.0f, dot(I, N)));
+	float etai = 1, etat = ior;
+	vec n = N;
+	if (cosi < 0) { cosi = -cosi; }
+	else { std::swap(etai, etat); n = -N; }
+	float eta = etai / etat;
+	float k = 1 - eta * eta * (1 - cosi * cosi);
+	return k < 0 ? vec(0, 0, 0) : eta * I + (eta * cosi - sqrtf(k)) * n;
+}
+
 vec scene(std::vector<std::unique_ptr<sphere>> &obj, std::vector<std::unique_ptr<light>> &lights, const ray& r, int depth = 0)
 {
 	int pos;
@@ -76,14 +88,21 @@ vec scene(std::vector<std::unique_ptr<sphere>> &obj, std::vector<std::unique_ptr
 		//compute reflection
 			if (obj[pos]->radius == 0.8f)
 			{
-				vec ref_direction = r.direction - 2.0 * dot(normal, r.direction) * normal;
-				ray reflection_ray(hit_point, ref_direction.normalize());
-				total += scene(obj, lights, reflection_ray, depth + 1);
+				//vec ref_direction = r.direction - 2.0 * dot(normal, r.direction) * normal;
+				//ray reflection_ray(hit_point, ref_direction.normalize());
+				//total += scene(obj, lights, reflection_ray, depth + 1);
+
+				vec ref_direction = refract(r.r_direction(), normal, 1.5f);
+				vec refract_orig = dot(ref_direction, normal) < 0 ? hit_point - normal * 1e-3 : hit_point + normal * 1e-3;
+				ray refraction_ray(refract_orig, ref_direction);
+				total += 0.3 * scene(obj, lights, refraction_ray, depth + 1);
 			}
 		}
 		for (size_t i = 0; i < lights.size(); i++)
 		{
 			vec diffuse = std::max(0.0f, dot(-lights[i]->light_direction(hit_point), normal)) * obj[pos]->color * lights[i]->light_intensity();
+			if (obj[pos]->radius == 0.8f)
+				diffuse = vec(0, 0, 0);//transparent should have no diffuse
 			total += diffuse;
 		}
 		return total;
@@ -106,6 +125,7 @@ int main()
 
 	objects.emplace_back(std::make_unique<sphere>(vec(1, 0, 0), vec(0, -1, -3), 1.0f));
 	objects.emplace_back(std::make_unique<sphere>(vec(0, 0, 1), vec(-2, 1, -3), 0.8f));
+	objects.emplace_back(std::make_unique<sphere>(vec(1, 0, 1), vec(-2, 1, -5), 1.0f));
 	objects.emplace_back(std::make_unique<sphere>(vec(0, 1, 0), vec(2, 1, -3), 1.0f));
 	objects.emplace_back(std::make_unique<sphere>(vec(1, 1, 0), vec(0, -5001, 0), 5000.0f));
 
