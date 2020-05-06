@@ -178,20 +178,29 @@ int main()
 
 	camera cam(lookfrom, lookat, 45.0f, aspect_ratio, aperature, (lookfrom-lookat).lenght());
 
+	int percentage;
+
 	for (int j = 0; j < SCR_HEIGHT; ++j)
 	{
 		vec color(0, 0, 0);
 		for (int i = 0; i < SCR_WIDTH; ++i)
 		{
-			float u = float(i) / float(SCR_WIDTH);
-			float v = float(j) / float(SCR_HEIGHT);
-			ray r = cam.c_get_ray(u, v);
-			vec color = scene(objects, lights, r);
+			for (int s = 0; s < 200; s++)
+			{
+				float u = (float(i) + random_double()) / float(SCR_WIDTH);
+				float v = (float(j) + random_double()) / float(SCR_HEIGHT);
+				ray r = cam.c_get_ray(u, v);
+				vec color = scene(objects, lights, r);
+			}
+			color = color / 200;
 			unsigned char red = (unsigned char)(std::max(0.0f, std::min(1.0f, std::pow(color.xCoord(), 1))) * 255);
 			unsigned char green = (unsigned char)(std::max(0.0f, std::min(1.0f, std::pow(color.yCoord(), 1))) * 255);
 			unsigned char blue = (unsigned char)(std::max(0.0f, std::min(1.0f, std::pow(color.zCoord(), 1))) * 255);
 			file << red << green << blue;
+			
 		}
+		percentage = float(j) / float(SCR_HEIGHT) * 100;
+		std::cout << percentage << std::endl;
 	}
 	file.close();
 	return 0;
