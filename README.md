@@ -1,4 +1,4 @@
-# Racey
+# Raytracer
 
 Basic RayTracer in C++
 
